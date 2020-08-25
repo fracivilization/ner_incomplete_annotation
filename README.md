@@ -16,6 +16,7 @@ Put your dataset under the data folder. You can obtain the `conll2003` and `conl
 
 Also, put your embedding file under the data directory to run. You need to specify the path for the embedding file.
 
+[link to GloVe](https://nlp.stanford.edu/projects/glove/)
 ### Running our approaches
 ```bash
 python3 main.py --embedding_file ${PATH_TO_EMBEDDING} --dataset conll2003 --variant hard

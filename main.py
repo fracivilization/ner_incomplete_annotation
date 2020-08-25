@@ -33,6 +33,7 @@ def parse_arguments(parser):
     ###Training Hyperparameters
     parser.add_argument('--device', type=str, default="cpu", choices=['cpu', 'cuda:0', 'cuda:1', 'cuda:2', 'cuda:3'],
                         help="GPU/CPU devices")
+
     parser.add_argument('--seed', type=int, default=42, help="random seed")
     parser.add_argument('--digit2zero', action="store_true", default=True,
                         help="convert the number to 0, make it true is better")

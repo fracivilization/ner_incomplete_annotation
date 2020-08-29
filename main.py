@@ -58,6 +58,7 @@ def parse_arguments(parser):
     ##model hyperparameter
     parser.add_argument('--variant', type=str, default="hard", choices=["hard", "soft"], help="The hard or soft variant of the model")
     parser.add_argument('--model_folder', type=str, default="english_model", help="The name to save the model files")
+    parser.add_argument('--result_folder', type=str, default="results", help="The name to save the model output")
     parser.add_argument('--hidden_dim', type=int, default=200, help="hidden size of the LSTM")
     parser.add_argument('--dropout', type=float, default=0.5, help="dropout for embedding")
     parser.add_argument('--use_char_rnn', type=int, default=1, choices=[0, 1], help="use character-level lstm, 0 or 1")
@@ -78,7 +79,7 @@ def train_model(config: Config, train_insts: List[List[Instance]], dev_insts: Li
     test_batches = batching_list_instances(config, test_insts)
 
     model_folder = config.model_folder
-    res_folder = "results"
+    res_folder = config.result_folder
     # if os.path.exists(model_folder):
     #     raise FileExistsError(f"The folder {model_folder} exists. Please either delete it or create a new one "
     #                           f"to avoid override.")

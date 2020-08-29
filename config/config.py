@@ -82,6 +82,7 @@ class Config:
 
         # Training hyperparameter
         self.model_folder = args.model_folder
+        self.result_folder = args.result_folder
         self.optimizer = args.optimizer.lower()
         self.learning_rate = args.learning_rate
         self.momentum = args.momentum

@@ -107,7 +107,6 @@ def evaluate_on_test(config: Config, all_train_insts: List[Instance], dev_insts:
     model_name = model_folder + "/final_lstm_crf.m"
     config_name = model_folder + "/config.conf"
     res_name = res_folder + "/lstm_crf.results".format()
-    test_batches = batching_list_instances(config, test_insts)
     model = train_one(config=config, train_insts=all_train_insts, dev_insts=dev_insts,
                       model_name=model_name, config_name=config_name, test_insts=test_insts,
                       result_filename=res_name)
@@ -119,7 +118,7 @@ def evaluate_on_test(config: Config, all_train_insts: List[Instance], dev_insts:
     # print("Final testing.")
     model.load_state_dict(torch.load(model_name))
     model.eval()
-    evaluate_model(config, model, test_batches, "test", test_insts)
+    evaluate_model(config, model, "test", test_insts)
     write_results(res_name, test_insts)
 
 def train_model(config: Config, train_insts: List[List[Instance]], dev_insts: List[Instance], test_insts: List[Instance]):
@@ -210,9 +209,9 @@ def train_one(config: Config, train_insts: List[Instance], dev_insts: List[Insta
 
         model.eval()
         # metric is [precision, recall, f_score]
-        dev_metrics = evaluate_model(config, model, dev_batches, "dev", dev_insts)
+        dev_metrics = evaluate_model(config, model, "dev", dev_insts)
         if test_insts is not None:
-            test_metrics = evaluate_model(config, model, test_batches, "test", test_insts)
+            test_metrics = evaluate_model(config, model, "test", test_insts)
         if dev_metrics[2] > best_dev_f1:
             print("saving the best model...")
             best_dev_f1 = dev_metrics[2]

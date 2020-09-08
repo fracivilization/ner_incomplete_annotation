@@ -72,16 +72,14 @@ def parse_arguments(parser):
 
 
 def train_model_on_splitted_train(config: Config, train_insts: List[List[Instance]], dev_insts: List[Instance]):
-    dev_batches = batching_list_instances(config, dev_insts)
     model_folder = config.model_folder
     model_names = []  # model names for each fold
-    train_batches = [batching_list_instances(config, insts) for insts in train_insts]
     for fold_id, folded_train_insts in enumerate(train_insts):
         print(f"[Training Info] Training fold {fold_id}.")
         model_name = model_folder + f"/lstm_crf_{fold_id}.m"
         model_names.append(model_name)
-        train_one(config=config, train_batches=train_batches[fold_id],
-                  dev_insts=dev_insts, dev_batches=dev_batches, model_name=model_name)
+        train_one(config=config, train_insts=train_insts[fold_id],
+                  dev_insts=dev_insts, model_name=model_name)
     return model_names
 
 def update_train_insts(config: Config, train_insts:  List[List[Instance]], model_names):
@@ -112,8 +110,8 @@ def evaluate_on_test(config: Config, all_train_insts: List[Instance], dev_insts:
     all_train_batches = batching_list_instances(config=config, insts=all_train_insts)
     dev_batches = batching_list_instances(config, dev_insts)
     test_batches = batching_list_instances(config, test_insts)
-    model = train_one(config=config, train_batches=all_train_batches, dev_insts=dev_insts, dev_batches=dev_batches,
-                      model_name=model_name, config_name=config_name, test_insts=test_insts, test_batches=test_batches,
+    model = train_one(config=config, train_insts=all_train_insts, dev_insts=dev_insts,
+                      model_name=model_name, config_name=config_name, test_insts=test_insts,
                       result_filename=res_name)
     print("Archiving the best Model...")
     with tarfile.open(model_folder + "/" + model_folder + ".tar.gz", "w:gz") as tar:
@@ -182,9 +180,11 @@ def predict_with_constraints(config: Config, model: NNCRF, fold_batches: List[Tu
         batch_id += 1
 
 
-def train_one(config: Config, train_batches: List[Tuple], dev_insts: List[Instance],
-              dev_batches: List[Tuple], model_name: str, test_insts: List[Instance] = None,
-              test_batches: List[Tuple] = None, config_name: str = None, result_filename: str = None) -> NNCRF:
+def train_one(config: Config, train_insts: List[Instance], dev_insts: List[Instance],model_name: str, test_insts: List[Instance] = None,
+              config_name: str = None, result_filename: str = None) -> NNCRF:
+    train_batches = simple_batching(config, train_insts)
+    dev_batches = simple_batching(config, dev_insts)
+    test_batches = simple_batching(config, test_insts)
     model = NNCRF(config)
     model.train()
     optimizer = get_optimizer(config, model)

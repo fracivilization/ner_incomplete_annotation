@@ -71,12 +71,67 @@ def parse_arguments(parser):
     return args
 
 
+def train_model_on_splitted_train(config: Config, train_insts: List[List[Instance]], dev_insts: List[Instance]):
+    dev_batches = batching_list_instances(config, dev_insts)
+    model_folder = config.model_folder
+    print(f"[Training Info] Running for {iter}th large iterations.")
+    model_names = []  # model names for each fold
+    train_batches = [batching_list_instances(config, insts) for insts in train_insts]
+    for fold_id, folded_train_insts in enumerate(train_insts):
+        print(f"[Training Info] Training fold {fold_id}.")
+        model_name = model_folder + f"/lstm_crf_{fold_id}.m"
+        model_names.append(model_name)
+        train_one(config=config, train_batches=train_batches[fold_id],
+                  dev_insts=dev_insts, dev_batches=dev_batches, model_name=model_name)
+    return model_names
+
+def update_train_insts(config: Config, train_insts:  List[List[Instance]], model_names):
+    # assign hard prediction to other folds
+    if config.variant == "hard":
+        print("\n\n[Data Info] Assigning labels for the HARD approach")
+    else:
+        print("\n\n[Data Info] Performing marginal decoding to assign the marginals")
+    train_batches = [batching_list_instances(config, insts) for insts in train_insts]
+    for fold_id, folded_train_insts in enumerate(train_insts):
+        model = NNCRF(config)
+        model_name = model_names[fold_id]
+        model.load_state_dict(torch.load(model_name))
+        predict_with_constraints(config=config, model=model,
+                                 fold_batches=train_batches[1 - fold_id],
+                                 folded_insts=train_insts[1 - fold_id])  ## set a new label id
+
+    print("\n\n")
+    return train_insts
+
+def evaluate_on_test(config: Config, all_train_insts: List[Instance], dev_insts: List[Instance], test_insts: List[Instance]):
+    print("[Training Info] Training the final model")
+    model_folder = config.model_folder
+    res_folder = config.result_folder
+    model_name = model_folder + "/final_lstm_crf.m"
+    config_name = model_folder + "/config.conf"
+    res_name = res_folder + "/lstm_crf.results".format()
+    all_train_batches = batching_list_instances(config=config, insts=all_train_insts)
+    dev_batches = batching_list_instances(config, dev_insts)
+    test_batches = batching_list_instances(config, test_insts)
+    model = train_one(config=config, train_batches=all_train_batches, dev_insts=dev_insts, dev_batches=dev_batches,
+                      model_name=model_name, config_name=config_name, test_insts=test_insts, test_batches=test_batches,
+                      result_filename=res_name)
+    print("Archiving the best Model...")
+    with tarfile.open(model_folder + "/" + model_folder + ".tar.gz", "w:gz") as tar:
+        tar.add(model_folder, arcname=os.path.basename(model_folder))
+    # print("The best dev: %.2f" % (best_dev[0]))
+    # print("The corresponding test: %.2f" % (best_test[0]))
+    # print("Final testing.")
+    model.load_state_dict(torch.load(model_name))
+    model.eval()
+    evaluate_model(config, model, test_batches, "test", test_insts)
+    write_results(res_name, test_insts)
+
 def train_model(config: Config, train_insts: List[List[Instance]], dev_insts: List[Instance], test_insts: List[Instance]):
     train_num = sum([len(insts) for insts in train_insts])
     print("[Training Info] number of training instances: %d" % (train_num))
 
-    dev_batches = batching_list_instances(config, dev_insts)
-    test_batches = batching_list_instances(config, test_insts)
+
 
     model_folder = config.model_folder
     res_folder = config.result_folder
@@ -92,50 +147,12 @@ def train_model(config: Config, train_insts: List[List[Instance]], dev_insts: Li
 
     num_outer_iterations = config.num_outer_iterations
     for iter in range(num_outer_iterations):
-        print(f"[Training Info] Running for {iter}th large iterations.")
-        model_names = [] #model names for each fold
-        train_batches = [batching_list_instances(config, insts) for insts in train_insts]
-        for fold_id, folded_train_insts in enumerate(train_insts):
-            print(f"[Training Info] Training fold {fold_id}.")
-            model_name = model_folder + f"/lstm_crf_{fold_id}.m"
-            model_names.append(model_name)
-            train_one(config=config, train_batches = train_batches[fold_id],
-                      dev_insts=dev_insts, dev_batches=dev_batches, model_name=model_name)
-
-        # assign hard prediction to other folds
-        if config.variant == "hard":
-            print("\n\n[Data Info] Assigning labels for the HARD approach")
-        else:
-            print("\n\n[Data Info] Performing marginal decoding to assign the marginals")
-
-        for fold_id, folded_train_insts in enumerate(train_insts):
-            model = NNCRF(config)
-            model_name = model_names[fold_id]
-            model.load_state_dict(torch.load(model_name))
-            predict_with_constraints(config=config, model=model,
-                                     fold_batches = train_batches[1-fold_id],
-                                     folded_insts= train_insts[1 - fold_id])  ## set a new label id
-
-        print("\n\n")
-
-        print("[Training Info] Training the final model" )
+        model_names = train_model_on_splitted_train(config, train_insts, dev_insts)
+        train_insts = update_train_insts(config, train_insts, model_names)
         all_train_insts = list(itertools.chain.from_iterable(train_insts))
-        model_name = model_folder + "/final_lstm_crf.m"
-        config_name = model_folder + "/config.conf"
-        res_name = res_folder + "/lstm_crf.results".format()
-        all_train_batches = batching_list_instances(config= config, insts=all_train_insts)
-        model = train_one(config = config, train_batches=all_train_batches, dev_insts=dev_insts, dev_batches=dev_batches,
-                          model_name=model_name, config_name=config_name,test_insts=test_insts, test_batches=test_batches,result_filename=res_name)
-        print("Archiving the best Model...")
-        with tarfile.open(model_folder + "/" + model_folder + ".tar.gz", "w:gz") as tar:
-            tar.add(model_folder, arcname=os.path.basename(model_folder))
-        # print("The best dev: %.2f" % (best_dev[0]))
-        # print("The corresponding test: %.2f" % (best_test[0]))
-        # print("Final testing.")
-        model.load_state_dict(torch.load(model_name))
-        model.eval()
-        evaluate_model(config, model, test_batches, "test", test_insts)
-        write_results(res_name, test_insts)
+        evaluate_on_test(config, all_train_insts, dev_insts, test_insts)
+
+
 
 
 def predict_with_constraints(config: Config, model: NNCRF, fold_batches: List[Tuple], folded_insts:List[Instance]):

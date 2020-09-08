@@ -107,8 +107,6 @@ def evaluate_on_test(config: Config, all_train_insts: List[Instance], dev_insts:
     model_name = model_folder + "/final_lstm_crf.m"
     config_name = model_folder + "/config.conf"
     res_name = res_folder + "/lstm_crf.results".format()
-    all_train_batches = batching_list_instances(config=config, insts=all_train_insts)
-    dev_batches = batching_list_instances(config, dev_insts)
     test_batches = batching_list_instances(config, test_insts)
     model = train_one(config=config, train_insts=all_train_insts, dev_insts=dev_insts,
                       model_name=model_name, config_name=config_name, test_insts=test_insts,
@@ -184,7 +182,10 @@ def train_one(config: Config, train_insts: List[Instance], dev_insts: List[Insta
               config_name: str = None, result_filename: str = None) -> NNCRF:
     train_batches = simple_batching(config, train_insts)
     dev_batches = simple_batching(config, dev_insts)
-    test_batches = simple_batching(config, test_insts)
+    if test_insts:
+        test_batches = simple_batching(config, test_insts)
+    else:
+        test_batches = None
     model = NNCRF(config)
     model.train()
     optimizer = get_optimizer(config, model)

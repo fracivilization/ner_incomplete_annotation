@@ -180,8 +180,8 @@ def predict_with_constraints(config: Config, model: NNCRF, fold_batches: List[Tu
 
 def train_one(config: Config, train_insts: List[Instance], dev_insts: List[Instance],model_name: str, test_insts: List[Instance] = None,
               config_name: str = None, result_filename: str = None) -> NNCRF:
-    train_batches = simple_batching(config, train_insts)
-    dev_batches = simple_batching(config, dev_insts)
+    train_batches = batching_list_instances(config, train_insts)
+    dev_batches = batching_list_instances(config, dev_insts)
     if test_insts:
         test_batches = simple_batching(config, test_insts)
     else:

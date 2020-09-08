@@ -232,8 +232,9 @@ def train_one(config: Config, train_insts: List[Instance], dev_insts: List[Insta
         print(f"The corresponding test: {saved_test_metrics}")
     return model
 
-def evaluate_model(config: Config, model: NNCRF, batch_insts_ids, name: str, insts: List[Instance]):
+def evaluate_model(config: Config, model: NNCRF, name: str, insts: List[Instance]):
     ## evaluation
+    batch_insts_ids = batching_list_instances(config, insts)
     metrics = np.asarray([0, 0, 0], dtype=int)
     batch_id = 0
     batch_size = config.batch_size

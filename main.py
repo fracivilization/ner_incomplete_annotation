@@ -74,7 +74,6 @@ def parse_arguments(parser):
 def train_model_on_splitted_train(config: Config, train_insts: List[List[Instance]], dev_insts: List[Instance]):
     dev_batches = batching_list_instances(config, dev_insts)
     model_folder = config.model_folder
-    print(f"[Training Info] Running for {iter}th large iterations.")
     model_names = []  # model names for each fold
     train_batches = [batching_list_instances(config, insts) for insts in train_insts]
     for fold_id, folded_train_insts in enumerate(train_insts):
@@ -147,6 +146,7 @@ def train_model(config: Config, train_insts: List[List[Instance]], dev_insts: Li
 
     num_outer_iterations = config.num_outer_iterations
     for iter in range(num_outer_iterations):
+        print(f"[Training Info] Running for {iter}th large iterations.")
         model_names = train_model_on_splitted_train(config, train_insts, dev_insts)
         train_insts = update_train_insts(config, train_insts, model_names)
         all_train_insts = list(itertools.chain.from_iterable(train_insts))
